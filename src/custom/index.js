@@ -10,7 +10,13 @@ function useJokes({ search }) {
 	const categoryValue = search?.includes('category')
 		? search.substring(10)
 		: '';
-	const queryValue = search?.includes('query') ? search.substring(7) : '';
+
+	// GET QUERY VALUE AND PAGE
+	let queryValues = search.includes('query') ? search.split('&') : [];
+	queryValues = [
+		queryValues[0]?.substring(7) || '',
+		queryValues[1]?.substring(5) || 1,
+	];
 
 	const fetchJokes = async (urlPart) => {
 		try {
@@ -23,7 +29,7 @@ function useJokes({ search }) {
 
 			setJokes({
 				type: 'SHOW_PAGE',
-				payload: jokes?.result?.length || false, // false on random or category
+				payload: jokes?.result?.id ? true : false, // false on random or category
 			});
 
 			setJokes({
@@ -32,10 +38,12 @@ function useJokes({ search }) {
 			});
 
 			// FREE TEXT SEARCH
-			if (jokes?.result?.length) {
+			if (jokes?.result) {
+				if (!jokes.result.id) return alert('No joke found!');
+
 				setJokes({
 					type: 'LIST',
-					payload: { ...jokes, text: search.substring(7) },
+					payload: { ...jokes, text: queryValues[0], page: +queryValues[1] },
 				});
 			} else {
 				// CATEGORY
@@ -59,28 +67,26 @@ function useJokes({ search }) {
 
 		if (search) {
 			// search by free text
-			if (search.includes('query')) {
-				if (queryValue) {
-					// FIND EXISTING TEXT
-					const existingJoke = jokes?.jokesList.find(
-						({ text }) => text === queryValue
-					);
+			if (queryValues[0]) {
+				// FIND EXISTING TEXT
+				const existingJoke = jokes?.jokesList
+					.find(({ text }) => text === queryValues[0])
+					?.data?.find(({ page }) => page === +queryValues[1])?.joke;
 
-					if (existingJoke) {
-						// STOP HERE
-						setJokes({
-							type: 'SHOULD_UPDATE',
-							payload: true,
-						});
+				if (existingJoke) {
+					// STOP HERE
+					setJokes({
+						type: 'SHOULD_UPDATE',
+						payload: true,
+					});
 
-						return setJokes({
-							type: 'SHOW_PAGE',
-							payload: true,
-						});
-					}
-
-					urlPart = `free_text/${queryValue}`;
+					return setJokes({
+						type: 'SHOW_PAGE',
+						payload: true,
+					});
 				}
+
+				urlPart = `free_text/?query=${queryValues[0]}&page=${queryValues[1]}`;
 			} else urlPart = categoryValue || '';
 		}
 
@@ -92,7 +98,7 @@ function useJokes({ search }) {
 		fetchJokes,
 		searchJokesHandler,
 		categoryValue,
-		queryValue,
+		queryValues,
 	};
 }
 

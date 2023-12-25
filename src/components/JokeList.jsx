@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { JokesContext } from '../context';
 
 import useJokes from '../custom';
 
 function JokeList() {
+	const navigate = useNavigate();
 	const { search } = useLocation();
 
 	const {
@@ -20,12 +21,12 @@ function JokeList() {
 		setJokes,
 	} = useContext(JokesContext);
 
-	const { searchJokesHandler, queryValue } = useJokes({
+	const { searchJokesHandler, queryValues } = useJokes({
 		search,
 	});
+	const [queryValue, currentPage] = queryValues;
 
 	const [joke, setJoke] = useState(null);
-	const [currentPage, setCurrentPage] = useState(1);
 	const [listTotal, setListTotal] = useState(0);
 
 	useEffect(() => {
@@ -37,7 +38,7 @@ function JokeList() {
 			// deltaY is a property of the wheel event that indicates the scroll direction
 			const scrollDirection = event.deltaY > 0 ? 'next' : 'prev';
 
-			if (showPagination && filterBy !== 'category' && currentPage > 0)
+			if (showPagination && filterBy !== 'category' && +currentPage > 0)
 				pageHandler(scrollDirection);
 		};
 
@@ -72,18 +73,25 @@ function JokeList() {
 					);
 				} else {
 					// FIND JOKE IN THE LIST
-					const jokeList = jokesList.find(({ text }) => text === queryValue);
-					setJoke(
-						jokeList?.result[currentPage - 1]
-							? {
-									...jokeList.result[currentPage - 1],
-									created_at: formatDate(
-										jokeList.result[currentPage - 1].created_at
-									),
-							  }
-							: null
+					const listData = jokesList.find(
+						({ text }) => text === queryValues[0]
 					);
-					setListTotal(jokeList?.total || '');
+
+					const joke = listData?.data?.find(
+						({ page }) => page === +queryValues[1]
+					)?.joke;
+
+					if (joke) {
+						setJoke({
+							...joke,
+							created_at: formatDate(joke.created_at),
+						});
+					} else {
+						// triggered when user navigate the pagination
+						searchJokesHandler();
+					}
+
+					setListTotal(listData?.total || 0);
 				}
 			}
 
@@ -123,12 +131,17 @@ function JokeList() {
 			payload: true,
 		});
 
+		let page = 0;
+
 		if (elClicked === 'prev') {
-			if (currentPage > 1) setCurrentPage((current) => current - 1);
-			return;
+			if (currentPage <= 1) return;
+			page = currentPage - 1;
+		} else {
+			if (currentPage >= listTotal) return;
+			page = +currentPage + 1;
 		}
 
-		if (currentPage < listTotal) setCurrentPage((current) => current + 1);
+		navigate(`/jokes?query=${queryValue}&page=${page}`);
 	};
 	return (
 		<section>
@@ -146,7 +159,10 @@ function JokeList() {
 					onClick={pageHandler}
 					className="flex justify-center md:justify-start items-center"
 				>
-					<button className="prev bg-transparent" disabled={currentPage < 2}>
+					<button
+						className="prev bg-transparent"
+						disabled={+queryValues[1] < 2}
+					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							fill="none"
@@ -164,11 +180,11 @@ function JokeList() {
 						</svg>
 					</button>{' '}
 					<span>
-						{currentPage} of {listTotal}
+						{queryValues[1]} of {listTotal}
 					</span>{' '}
 					<button
 						className="next bg-transparent"
-						disabled={currentPage === listTotal}
+						disabled={+queryValues[1] === listTotal}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"

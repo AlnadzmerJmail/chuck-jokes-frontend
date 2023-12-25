@@ -30,9 +30,32 @@ export const jokesReducer = (state, action) => {
 				categoryJoke: state.categoryJoke.value ? state.categoryJoke : payload,
 			};
 		case 'LIST':
+			let list = [...state.jokesList];
+
+			const newTextData = { page: payload.page, joke: payload.result };
+			const listData = {
+				total: payload.total,
+				text: payload.text,
+				data: [newTextData],
+			};
+
+			// list is empty at first
+			const existingTextData = list.find(
+				({ text = '' } = {}) => text === payload.text
+			);
+
+			if (existingTextData) {
+				// dev environment
+				if (!existingTextData.data.find(({ page }) => page === payload.page)) {
+					existingTextData.data.push(newTextData);
+				}
+			} else {
+				list.push(listData);
+			}
+
 			return {
 				...state,
-				jokesList: [...state.jokesList, payload],
+				jokesList: [...list],
 			};
 		case 'SHOW_PAGE':
 			return {

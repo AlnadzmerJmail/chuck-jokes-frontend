@@ -15,7 +15,9 @@ function SearchBy() {
 		jokes: { categories, filterBy },
 		setJokes,
 	} = useContext(JokesContext);
-	const { searchJokesHandler, categoryValue } = useJokes({ search });
+	const { searchJokesHandler, categoryValue, queryValues } = useJokes({
+		search,
+	});
 
 	useEffect(() => {
 		const fetchCategories = async () => {
@@ -47,16 +49,12 @@ function SearchBy() {
 
 	const freeTextHandler = (e) => {
 		const { value } = e.target;
-		navigate(value ? `/jokes?query=${value.toLowerCase()}` : '/');
+		navigate(value ? `/jokes?query=${value.toLowerCase()}&page=${1}` : '/');
 
 		if (!value) {
 			setJokes({
 				type: 'SHOW_PAGE',
 				payload: false,
-			});
-			setJokes({
-				type: 'SHOULD_UPDATE',
-				payload: true,
 			});
 		}
 	};
@@ -101,9 +99,7 @@ function SearchBy() {
 						<select
 							className="w-full bg-transparent text-blue-400 capitalize"
 							name="category"
-							value={
-								search && !search.includes('query') ? search.substring(10) : ''
-							}
+							value={categoryValue}
 							onChange={categoryHanler}
 						>
 							<option className="capitalize">Select Category</option>
@@ -117,9 +113,7 @@ function SearchBy() {
 						<input
 							name="free_text"
 							type="text"
-							value={
-								search && search.includes('query') ? search.substring(7) : ''
-							}
+							value={queryValues[0]}
 							placeholder="Enter text"
 							className="w-full bg-transparent text-blue-400 capitalize"
 							onChange={freeTextHandler}
